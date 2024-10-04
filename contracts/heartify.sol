@@ -10,19 +10,30 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721BurnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract MyToken is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradeable, ERC721URIStorageUpgradeable, ERC721PausableUpgradeable, AccessControlUpgradeable, ERC721BurnableUpgradeable {
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+contract MyToken is
+    Initializable,
+    ERC721Upgradeable,
+    ERC721EnumerableUpgradeable,
+    ERC721URIStorageUpgradeable,
+    ERC721PausableUpgradeable,
+    AccessControlUpgradeable,
+    ERC721BurnableUpgradeable
+{
+    address payable public wallet;
+    uint256 public mintingFee;
+    event MintingFeeUpdated(uint256 newFee);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor(address payable _wallet) {
+        wallet = _wallet;
         _disableInitializers();
     }
 
-    function initialize(address defaultAdmin, address pauser, address minter)
-        initializer public
-    {
-        __ERC721_init("MyToken", "MTK");
+    function initialize(
+        address defaultAdmin
+        
+    ) public initializer {
+        __ERC721_init("Heartify", "HEART");
         __ERC721Enumerable_init();
         __ERC721URIStorage_init();
         __ERC721Pausable_init();
@@ -30,44 +41,73 @@ contract MyToken is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradeabl
         __ERC721Burnable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
-        _grantRole(PAUSER_ROLE, pauser);
-        _grantRole(MINTER_ROLE, minter);
     }
 
-    function pause() public onlyRole(PAUSER_ROLE) {
+    function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
         _pause();
     }
 
-    function unpause() public onlyRole(PAUSER_ROLE) {
+    function unpause() public onlyRole(DEFAULT_ADMIN_ROLE) {
         _unpause();
     }
 
-    function safeMint(address to, uint256 tokenId, string memory uri)
-        public
-        onlyRole(MINTER_ROLE)
-    {
+    function safeMint(address to, uint256 tokenId) public payable {
+        require(msg.value >= mintingFee, "Insufficient funds to mint");
+
         _safeMint(to, tokenId);
-        _setTokenURI(tokenId, uri);
+        
+        // URI will be set from the frontend after fetching from the API
+        // _setTokenURI(tokenId, uri);
+
+        
+        wallet.transfer(msg.value);
+    }
+
+    function updateMintFee(uint256 newFee) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        mintingFee = newFee;
+        emit MintingFeeUpdated(newFee);
+    }
+
+    function batchMint(address to, uint256[] memory tokenIds) public payable {
+        require(msg.value >= mintingFee * tokenIds.length, "Insufficient funds to batch mint");
+        require(tokenIds.length > 0, "Token IDs array cannot be empty");
+
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            _safeMint(to, tokenIds[i]);
+            // _setTokenURI(tokenIds[i], uris[i]); // URI will be set from the frontend after fetching from the API
+        }
+
+        wallet.transfer(msg.value); 
     }
 
     // The following functions are overrides required by Solidity.
 
-    function _update(address to, uint256 tokenId, address auth)
+    function _update(
+        address to,
+        uint256 tokenId,
+        address auth
+    )
         internal
-        override(ERC721Upgradeable, ERC721EnumerableUpgradeable, ERC721PausableUpgradeable)
+        override(
+            ERC721Upgradeable,
+            ERC721EnumerableUpgradeable,
+            ERC721PausableUpgradeable
+        )
         returns (address)
     {
         return super._update(to, tokenId, auth);
     }
 
-    function _increaseBalance(address account, uint128 value)
-        internal
-        override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
-    {
+    function _increaseBalance(
+        address account,
+        uint128 value
+    ) internal override(ERC721Upgradeable, ERC721EnumerableUpgradeable) {
         super._increaseBalance(account, value);
     }
 
-    function tokenURI(uint256 tokenId)
+    function tokenURI(
+        uint256 tokenId
+    )
         public
         view
         override(ERC721Upgradeable, ERC721URIStorageUpgradeable)
@@ -76,10 +116,17 @@ contract MyToken is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradeabl
         return super.tokenURI(tokenId);
     }
 
-    function supportsInterface(bytes4 interfaceId)
+    function supportsInterface(
+        bytes4 interfaceId
+    )
         public
         view
-        override(ERC721Upgradeable, ERC721EnumerableUpgradeable, ERC721URIStorageUpgradeable, AccessControlUpgradeable)
+        override(
+            ERC721Upgradeable,
+            ERC721EnumerableUpgradeable,
+            ERC721URIStorageUpgradeable,
+            AccessControlUpgradeable
+        )
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
