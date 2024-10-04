@@ -97,3 +97,7 @@ ignition/deployments/chain-31337
 
 # Log files
 *.log
+
+/ignition
+
+/ignition/modules
