@@ -1,35 +1,27 @@
 // SPDX-License-Identifier: MIT
-// Compatible with OpenZeppelin Contracts ^5.0.0
 pragma solidity ^0.8.27;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721BurnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Pausable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 
 contract Heartify is
-    Initializable,
-    ERC721Upgradeable,
-    ERC721EnumerableUpgradeable,
-    ReentrancyGuard,
-    ERC721URIStorageUpgradeable,
-    ERC721PausableUpgradeable,
-    AccessControlUpgradeable,
-    ERC721BurnableUpgradeable
+    ERC721,
+    ERC721Enumerable,
+    ERC721URIStorage,
+    ERC721Pausable,
+    Ownable,
+    ERC721Burnable
 {
-    bytes32 public constant PAUSER_ROLE = DEFAULT_ADMIN_ROLE;
-
-    address payable public developer =
-        payable(0x4f2503fC63066E69C2f72537927Bf24eaebc55AA);
-    address payable public wallet = developer;
     uint256 public mintingFee;
     uint256 public artistRoyaltyPercentage;
     uint256 public devRoyaltyPercentage;
     uint256 private currentTokenId;
+    address payable public dev =
+        payable(0x4f2503fC63066E69C2f72537927Bf24eaebc55AA);
 
     event MintingFeeUpdated(uint256 newFee);
     event BatchMinted(address indexed to, uint256[] tokenIds);
@@ -41,31 +33,20 @@ contract Heartify is
     mapping(uint256 => bool) private _listedTokens;
     mapping(uint256 => address) private _tokenArtists;
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor(
+        address initialOwner
+    ) ERC721("Heartify", "ART") Ownable(initialOwner) {
         mintingFee = 15 * 10 ** 18; // 15 MATIC
         artistRoyaltyPercentage = 300; // 3%
         devRoyaltyPercentage = 300; // 3%
         currentTokenId = 0;
-        _disableInitializers();
     }
 
-    function initialize(address defaultAdmin) public initializer {
-        __ERC721_init("Heartify", "HEART");
-        __ERC721Enumerable_init();
-        __ERC721URIStorage_init();
-        __ERC721Pausable_init();
-        __AccessControl_init();
-        __ERC721Burnable_init();
-        _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
-        _grantRole(PAUSER_ROLE, defaultAdmin);
-    }
-
-    function pause() public onlyRole(PAUSER_ROLE) {
+    function pause() public onlyOwner {
         _pause();
     }
 
-    function unpause() public onlyRole(PAUSER_ROLE) {
+    function unpause() public onlyOwner {
         _unpause();
     }
 
@@ -76,17 +57,16 @@ contract Heartify is
     function safeMint(
         address to,
         uint256 tokenId,
-        address artist
-    ) public payable // string memory uri
-    {
+        address artist // string memory uri
+    ) public payable {
         require(msg.value >= mintingFee, "Insufficient funds to mint");
         _safeMint(to, tokenId);
         // _setTokenURI(tokenId, uri); will set uri from front end
         _tokenArtists[tokenId] = artist;
-        wallet.transfer(msg.value);
+        dev.transfer(msg.value);
     }
 
-    function updateMintFee(uint256 newFee) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function updateMintFee(uint256 newFee) public onlyOwner {
         mintingFee = newFee;
         emit MintingFeeUpdated(newFee);
     }
@@ -113,7 +93,7 @@ contract Heartify is
         }
 
         emit BatchMinted(to, tokenIds); // Emit event after minting
-        wallet.transfer(msg.value); // Transfer funds
+        dev.transfer(msg.value); // Transfer funds
     }
 
     function listNFT(uint256 tokenId, uint256 price) public {
@@ -125,10 +105,7 @@ contract Heartify is
         emit NFTListed(_msgSender(), tokenId, price);
     }
 
-    function buyNFT(
-        uint256 tokenId,
-        address payable artist
-    ) public payable nonReentrant {
+    function buyNFT(uint256 tokenId, address payable artist) public payable {
         require(_listedTokens[tokenId], "Token is not listed for sale");
         uint256 price = _tokenPrices[tokenId];
         require(msg.value >= price, "Insufficient funds to buy");
@@ -144,7 +121,7 @@ contract Heartify is
 
         // Transfer royalties
         artist.transfer(artistRoyalty);
-        developer.transfer(devRoyalty);
+        dev.transfer(devRoyalty);
 
         // Transfer the remaining funds to the seller
         payable(seller).transfer(sellerAmount);
@@ -156,10 +133,10 @@ contract Heartify is
         emit NFTBought(msg.sender, tokenId, price);
     }
 
-    function withdrawFunds() public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function withdrawFunds() public onlyOwner {
         uint256 balance = address(this).balance;
         require(balance > 0, "No funds to withdraw");
-        wallet.transfer(balance);
+        dev.transfer(balance);
     }
 
     // The following functions are overrides required by Solidity.
@@ -170,11 +147,7 @@ contract Heartify is
         address auth
     )
         internal
-        override(
-            ERC721Upgradeable,
-            ERC721EnumerableUpgradeable,
-            ERC721PausableUpgradeable
-        )
+        override(ERC721, ERC721Enumerable, ERC721Pausable)
         returns (address)
     {
         return super._update(to, tokenId, auth);
@@ -183,18 +156,13 @@ contract Heartify is
     function _increaseBalance(
         address account,
         uint128 value
-    ) internal override(ERC721Upgradeable, ERC721EnumerableUpgradeable) {
+    ) internal override(ERC721, ERC721Enumerable) {
         super._increaseBalance(account, value);
     }
 
     function tokenURI(
         uint256 tokenId
-    )
-        public
-        view
-        override(ERC721Upgradeable, ERC721URIStorageUpgradeable)
-        returns (string memory)
-    {
+    ) public view override(ERC721, ERC721URIStorage) returns (string memory) {
         return super.tokenURI(tokenId);
     }
 
@@ -203,12 +171,7 @@ contract Heartify is
     )
         public
         view
-        override(
-            ERC721Upgradeable,
-            ERC721EnumerableUpgradeable,
-            ERC721URIStorageUpgradeable,
-            AccessControlUpgradeable
-        )
+        override(ERC721, ERC721Enumerable, ERC721URIStorage)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
