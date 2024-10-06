@@ -56,12 +56,15 @@ contract Heartify is
 
     function safeMint(
         address to,
-        uint256 tokenId,
         address artist // string memory uri
     ) public payable {
         require(msg.value >= mintingFee, "Insufficient funds to mint");
-        _safeMint(to, tokenId);
+        require(msg.value >= mintingFee, "Insufficient funds to mint");
+        require(to != address(0), "Cannot mint to zero address");
+        currentTokenId += 1;
+        uint256 tokenId = currentTokenId;
         // _setTokenURI(tokenId, uri); will set uri from front end
+        _safeMint(to, tokenId);
         _tokenArtists[tokenId] = artist;
         dev.transfer(msg.value);
     }
@@ -85,7 +88,7 @@ contract Heartify is
         uint256[] memory tokenIds = new uint256[](numberOfTokens);
 
         for (uint256 i = 0; i < numberOfTokens; i++) {
-            currentTokenId++;
+            currentTokenId += 1;
             uint256 newTokenId = currentTokenId;
             _safeMint(to, newTokenId);
             // _setTokenURI(newTokenId, uri) has to be done front end
