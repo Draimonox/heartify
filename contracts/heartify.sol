@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Compatible with OpenZeppelin Contracts ^5.0.0
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.27;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
@@ -9,6 +8,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721Pausab
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721BurnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract Heartify is
     Initializable,
@@ -17,30 +17,43 @@ contract Heartify is
     ERC721URIStorageUpgradeable,
     ERC721PausableUpgradeable,
     AccessControlUpgradeable,
-    ERC721BurnableUpgradeable
+    ERC721BurnableUpgradeable,
+    ReentrancyGuard
 {
     address payable public wallet;
     uint256 public mintingFee;
-    event MintingFeeUpdated(uint256 newFee);
-    address public artist;
-    address payable public developer;
     uint256 public artistRoyaltyPercentage;
     uint256 public devRoyaltyPercentage;
+    address payable public artist;
+    address payable public developer;
+    uint256 private currentTokenId;
+
+    event MintingFeeUpdated(uint256 newFee);
+    event BatchMinted(address indexed to, uint256[] tokenIds);
+    event NFTSold(address seller, uint256 tokenId, uint256 price);
+    event NFTListed(address seller, uint256 tokenId, uint256 price);
+    event NFTBought(address buyer, uint256 tokenId, uint256 price);
+
+    mapping(uint256 => uint256) private _tokenPrices;
+    mapping(uint256 => bool) private _listedTokens;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address payable _wallet) {
+    constructor(
+        address payable _wallet,
+        address payable _artist,
+        address payable _developer
+    ) {
         wallet = _wallet;
+        artist = _artist;
+        developer = _developer;
+        mintingFee = 15 * 10 ** 18; // 15 MATIC
+        artistRoyaltyPercentage = 300; // 3%
+        devRoyaltyPercentage = 300; // 3%
+        currentTokenId = 0;
         _disableInitializers();
     }
 
-    function initialize(
-        address defaultAdmin,
-        address payable _artist,
-        address payable _developer,
-        uint256 _artistRoyaltyPercentage,
-        uint256 _devRoyaltyPercentage
-        
-    ) public initializer {
+    function initialize(address defaultAdmin) public initializer {
         __ERC721_init("Heartify", "HEART");
         __ERC721Enumerable_init();
         __ERC721URIStorage_init();
@@ -49,12 +62,6 @@ contract Heartify is
         __ERC721Burnable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
-
-
-        artist = _artist;
-        developer = _developer;
-        artistRoyaltyPercentage = _artistRoyaltyPercentage;
-        devRoyaltyPercentage = _devRoyaltyPercentage;
     }
 
     function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -65,15 +72,17 @@ contract Heartify is
         _unpause();
     }
 
-    function safeMint(address to, uint256 tokenId) public payable {
+    function safeMint(
+        address to,
+        uint256 tokenId,
+        string memory uri
+    ) public payable {
         require(msg.value >= mintingFee, "Insufficient funds to mint");
+        require(!_exists(tokenId), "Token ID already exists");
 
         _safeMint(to, tokenId);
-        
-        // URI will be set from the frontend after fetching from the API
-        // _setTokenURI(tokenId, uri);
+        _setTokenURI(tokenId, uri);
 
-        
         wallet.transfer(msg.value);
     }
 
@@ -82,25 +91,102 @@ contract Heartify is
         emit MintingFeeUpdated(newFee);
     }
 
-    function batchMint(address to, uint256[] memory tokenIds) public payable {
-        require(msg.value >= mintingFee * tokenIds.length, "Insufficient funds to batch mint");
-        require(tokenIds.length > 0, "Token IDs array cannot be empty");
+    function getTokenPrice(uint256 tokenId) public view returns (uint256) {
+        return _tokenPrices[tokenId];
+    }
 
-        for (uint256 i = 0; i < tokenIds.length; i++) {
-            _safeMint(to, tokenIds[i]);
-            // _setTokenURI(tokenIds[i], uris[i]); // URI will be set from the frontend after fetching from the API
+    function batchMint(
+        address to,
+        uint256 numberOfTokens,
+        string memory uri
+    ) public payable {
+        require(
+            msg.value >= mintingFee * numberOfTokens,
+            "Insufficient funds to batch mint"
+        );
+        require(numberOfTokens > 0, "Must mint at least one token");
+
+        uint256[] memory tokenIds = new uint256[](numberOfTokens);
+
+        for (uint256 i = 0; i < numberOfTokens; i++) {
+            currentTokenId++;
+            uint256 newTokenId = currentTokenId;
+            _safeMint(to, newTokenId);
+            _setTokenURI(newTokenId, uri);
+            tokenIds[i] = newTokenId;
         }
 
-        wallet.transfer(msg.value); 
+        emit BatchMinted(to, tokenIds); // Emit event after minting
+        wallet.transfer(msg.value); // Transfer funds
     }
-    
+
+    function listNFT(uint256 tokenId, uint256 price) public {
+        require(
+            _isApprovedOrOwner(_msgSender(), tokenId),
+            "Caller is not owner nor approved"
+        );
+        require(price > 0, "Price must be greater than zero");
+
+        _tokenPrices[tokenId] = price;
+        _listedTokens[tokenId] = true;
+
+        emit NFTListed(_msgSender(), tokenId, price);
+    }
+
+    function buyNFT(uint256 tokenId) public payable nonReentrant {
+        require(_listedTokens[tokenId], "Token is not listed for sale");
+        uint256 price = _tokenPrices[tokenId];
+        require(msg.value >= price, "Insufficient funds to buy");
+
+        address seller = ownerOf(tokenId);
+
+        uint256 artistRoyalty = (price * artistRoyaltyPercentage) / 10000;
+        uint256 devRoyalty = (price * devRoyaltyPercentage) / 10000;
+        uint256 sellerAmount = price - (artistRoyalty + devRoyalty);
+
+        // Transfer the NFT to the buyer
+        _transfer(seller, msg.sender, tokenId);
+
+        // Transfer royalties
+        artist.transfer(artistRoyalty);
+        developer.transfer(devRoyalty);
+
+        // Transfer the remaining funds to the seller
+        payable(seller).transfer(sellerAmount);
+
+        // Clear listing
+        _listedTokens[tokenId] = false;
+        _tokenPrices[tokenId] = 0;
+
+        emit NFTBought(msg.sender, tokenId, price);
+    }
+
+    function withdrawFunds() public onlyRole(DEFAULT_ADMIN_ROLE) {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No funds to withdraw");
+        wallet.transfer(balance);
+    }
+
+    function _isApprovedOrOwner(
+        address spender,
+        uint256 tokenId
+    ) internal view returns (bool) {
+        require(
+            _exists(tokenId),
+            "ERC721: operator query for nonexistent token"
+        );
+        address owner = ownerOf(tokenId);
+        return (spender == owner ||
+            getApproved(tokenId) == spender ||
+            isApprovedForAll(owner, spender));
+    }
 
     // The following functions are overrides required by Solidity.
 
-    function _update(
+    function _beforeTokenTransfer(
+        address from,
         address to,
-        uint256 tokenId,
-        address auth
+        uint256 tokenId
     )
         internal
         override(
@@ -108,16 +194,14 @@ contract Heartify is
             ERC721EnumerableUpgradeable,
             ERC721PausableUpgradeable
         )
-        returns (address)
     {
-        return super._update(to, tokenId, auth);
+        super._beforeTokenTransfer(from, to, tokenId);
     }
 
-    function _increaseBalance(
-        address account,
-        uint128 value
-    ) internal override(ERC721Upgradeable, ERC721EnumerableUpgradeable) {
-        super._increaseBalance(account, value);
+    function _burn(
+        uint256 tokenId
+    ) internal override(ERC721Upgradeable, ERC721URIStorageUpgradeable) {
+        super._burn(tokenId);
     }
 
     function tokenURI(
@@ -139,7 +223,6 @@ contract Heartify is
         override(
             ERC721Upgradeable,
             ERC721EnumerableUpgradeable,
-            ERC721URIStorageUpgradeable,
             AccessControlUpgradeable
         )
         returns (bool)
