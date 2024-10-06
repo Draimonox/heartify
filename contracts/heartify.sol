@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// Compatible with OpenZeppelin Contracts ^5.0.0
 pragma solidity ^0.8.27;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
@@ -14,18 +15,20 @@ contract Heartify is
     Initializable,
     ERC721Upgradeable,
     ERC721EnumerableUpgradeable,
+    ReentrancyGuard,
     ERC721URIStorageUpgradeable,
     ERC721PausableUpgradeable,
     AccessControlUpgradeable,
-    ERC721BurnableUpgradeable,
-    ReentrancyGuard
+    ERC721BurnableUpgradeable
 {
-    address payable public wallet;
+    bytes32 public constant PAUSER_ROLE = DEFAULT_ADMIN_ROLE;
+
+    address payable public developer =
+        payable(0x4f2503fC63066E69C2f72537927Bf24eaebc55AA);
+    address payable public wallet = developer;
     uint256 public mintingFee;
     uint256 public artistRoyaltyPercentage;
     uint256 public devRoyaltyPercentage;
-    address payable public artist;
-    address payable public developer;
     uint256 private currentTokenId;
 
     event MintingFeeUpdated(uint256 newFee);
@@ -36,16 +39,10 @@ contract Heartify is
 
     mapping(uint256 => uint256) private _tokenPrices;
     mapping(uint256 => bool) private _listedTokens;
+    mapping(uint256 => address) private _tokenArtists;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(
-        address payable _wallet,
-        address payable _artist,
-        address payable _developer
-    ) {
-        wallet = _wallet;
-        artist = _artist;
-        developer = _developer;
+    constructor() {
         mintingFee = 15 * 10 ** 18; // 15 MATIC
         artistRoyaltyPercentage = 300; // 3%
         devRoyaltyPercentage = 300; // 3%
@@ -60,29 +57,32 @@ contract Heartify is
         __ERC721Pausable_init();
         __AccessControl_init();
         __ERC721Burnable_init();
-
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
+        _grantRole(PAUSER_ROLE, defaultAdmin);
     }
 
-    function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function pause() public onlyRole(PAUSER_ROLE) {
         _pause();
     }
 
-    function unpause() public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function unpause() public onlyRole(PAUSER_ROLE) {
         _unpause();
+    }
+
+    function getArtist(uint256 tokenId) public view returns (address) {
+        return _tokenArtists[tokenId];
     }
 
     function safeMint(
         address to,
         uint256 tokenId,
-        string memory uri
-    ) public payable {
+        address artist
+    ) public payable // string memory uri
+    {
         require(msg.value >= mintingFee, "Insufficient funds to mint");
-        require(!_exists(tokenId), "Token ID already exists");
-
         _safeMint(to, tokenId);
-        _setTokenURI(tokenId, uri);
-
+        // _setTokenURI(tokenId, uri); will set uri from front end
+        _tokenArtists[tokenId] = artist;
         wallet.transfer(msg.value);
     }
 
@@ -95,11 +95,7 @@ contract Heartify is
         return _tokenPrices[tokenId];
     }
 
-    function batchMint(
-        address to,
-        uint256 numberOfTokens,
-        string memory uri
-    ) public payable {
+    function batchMint(address to, uint256 numberOfTokens) public payable {
         require(
             msg.value >= mintingFee * numberOfTokens,
             "Insufficient funds to batch mint"
@@ -112,7 +108,7 @@ contract Heartify is
             currentTokenId++;
             uint256 newTokenId = currentTokenId;
             _safeMint(to, newTokenId);
-            _setTokenURI(newTokenId, uri);
+            // _setTokenURI(newTokenId, uri) has to be done front end
             tokenIds[i] = newTokenId;
         }
 
@@ -121,10 +117,6 @@ contract Heartify is
     }
 
     function listNFT(uint256 tokenId, uint256 price) public {
-        require(
-            _isApprovedOrOwner(_msgSender(), tokenId),
-            "Caller is not owner nor approved"
-        );
         require(price > 0, "Price must be greater than zero");
 
         _tokenPrices[tokenId] = price;
@@ -133,7 +125,10 @@ contract Heartify is
         emit NFTListed(_msgSender(), tokenId, price);
     }
 
-    function buyNFT(uint256 tokenId) public payable nonReentrant {
+    function buyNFT(
+        uint256 tokenId,
+        address payable artist
+    ) public payable nonReentrant {
         require(_listedTokens[tokenId], "Token is not listed for sale");
         uint256 price = _tokenPrices[tokenId];
         require(msg.value >= price, "Insufficient funds to buy");
@@ -167,26 +162,12 @@ contract Heartify is
         wallet.transfer(balance);
     }
 
-    function _isApprovedOrOwner(
-        address spender,
-        uint256 tokenId
-    ) internal view returns (bool) {
-        require(
-            _exists(tokenId),
-            "ERC721: operator query for nonexistent token"
-        );
-        address owner = ownerOf(tokenId);
-        return (spender == owner ||
-            getApproved(tokenId) == spender ||
-            isApprovedForAll(owner, spender));
-    }
-
     // The following functions are overrides required by Solidity.
 
-    function _beforeTokenTransfer(
-        address from,
+    function _update(
         address to,
-        uint256 tokenId
+        uint256 tokenId,
+        address auth
     )
         internal
         override(
@@ -194,14 +175,16 @@ contract Heartify is
             ERC721EnumerableUpgradeable,
             ERC721PausableUpgradeable
         )
+        returns (address)
     {
-        super._beforeTokenTransfer(from, to, tokenId);
+        return super._update(to, tokenId, auth);
     }
 
-    function _burn(
-        uint256 tokenId
-    ) internal override(ERC721Upgradeable, ERC721URIStorageUpgradeable) {
-        super._burn(tokenId);
+    function _increaseBalance(
+        address account,
+        uint128 value
+    ) internal override(ERC721Upgradeable, ERC721EnumerableUpgradeable) {
+        super._increaseBalance(account, value);
     }
 
     function tokenURI(
@@ -223,6 +206,7 @@ contract Heartify is
         override(
             ERC721Upgradeable,
             ERC721EnumerableUpgradeable,
+            ERC721URIStorageUpgradeable,
             AccessControlUpgradeable
         )
         returns (bool)
