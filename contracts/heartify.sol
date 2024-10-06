@@ -10,7 +10,7 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721BurnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract MyToken is
+contract Heartify is
     Initializable,
     ERC721Upgradeable,
     ERC721EnumerableUpgradeable,
@@ -22,6 +22,10 @@ contract MyToken is
     address payable public wallet;
     uint256 public mintingFee;
     event MintingFeeUpdated(uint256 newFee);
+    address public artist;
+    address payable public developer;
+    uint256 public artistRoyaltyPercentage;
+    uint256 public devRoyaltyPercentage;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address payable _wallet) {
@@ -30,7 +34,11 @@ contract MyToken is
     }
 
     function initialize(
-        address defaultAdmin
+        address defaultAdmin,
+        address payable _artist,
+        address payable _developer,
+        uint256 _artistRoyaltyPercentage,
+        uint256 _devRoyaltyPercentage
         
     ) public initializer {
         __ERC721_init("Heartify", "HEART");
@@ -41,6 +49,12 @@ contract MyToken is
         __ERC721Burnable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
+
+
+        artist = _artist;
+        developer = _developer;
+        artistRoyaltyPercentage = _artistRoyaltyPercentage;
+        devRoyaltyPercentage = _devRoyaltyPercentage;
     }
 
     function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -79,6 +93,7 @@ contract MyToken is
 
         wallet.transfer(msg.value); 
     }
+    
 
     // The following functions are overrides required by Solidity.
 
