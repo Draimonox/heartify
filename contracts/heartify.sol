@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 
 contract Heartify is
@@ -13,8 +14,9 @@ contract Heartify is
     ERC721Enumerable,
     ERC721URIStorage,
     ERC721Pausable,
-    Ownable,
-    ERC721Burnable
+    ERC721Burnable,
+    ReentrancyGuard,
+    Ownable
 {
     uint256 public mintingFee;
     uint256 public artistRoyaltyPercentage;
@@ -24,7 +26,6 @@ contract Heartify is
         payable(0x4f2503fC63066E69C2f72537927Bf24eaebc55AA);
 
     event MintingFeeUpdated(uint256 newFee);
-    event BatchMinted(address indexed to, uint256[] tokenIds);
     event NFTSold(address seller, uint256 tokenId, uint256 price);
     event NFTListed(address seller, uint256 tokenId, uint256 price);
     event NFTBought(address buyer, uint256 tokenId, uint256 price);
@@ -55,10 +56,8 @@ contract Heartify is
     }
 
     function safeMint(
-        address to,
-        address artist // string memory uri
+        address to // string memory uri
     ) public payable {
-        require(msg.value >= mintingFee, "Insufficient funds to mint");
         require(msg.value >= mintingFee, "Insufficient funds to mint");
         require(to != address(0), "Cannot mint to zero address");
         currentTokenId += 1;
@@ -66,7 +65,7 @@ contract Heartify is
         // _setTokenURI(tokenId, uri); will set uri from front end
         _safeMint(to, tokenId);
         // can just use msg.sender
-        _tokenArtists[tokenId] = artist;
+        _tokenArtists[currentTokenId] = msg.sender; // Use the minter's address as the artist.
         dev.transfer(msg.value);
     }
 
@@ -85,56 +84,52 @@ contract Heartify is
             "Insufficient funds to batch mint"
         );
         require(numberOfTokens > 0, "Must mint at least one token");
-        // not sure why this is necessary
-        uint256[] memory tokenIds = new uint256[](numberOfTokens);
-
         for (uint256 i = 0; i < numberOfTokens; i++) {
             currentTokenId += 1;
             uint256 newTokenId = currentTokenId;
             // should just use msg.sender instead of to
             _safeMint(to, newTokenId);
             // _setTokenURI(newTokenId, uri) has to be done front end
-
-            // again, not sure why this is necessary if it's just for the event, safeMint already emits a Transfer() event for each token
-            tokenIds[i] = newTokenId;
         }
-
-        emit BatchMinted(to, tokenIds); // Emit event after minting
         dev.transfer(msg.value); // Transfer funds
     }
 
     function listNFT(uint256 tokenId, uint256 price) public {
         require(price > 0, "Price must be greater than zero");
-
+        require(ownerOf(tokenId) == msg.sender, "You do not own this token");
+        require(!_listedTokens[tokenId], "Token is already listed for sale");
         _tokenPrices[tokenId] = price;
         _listedTokens[tokenId] = true;
 
         emit NFTListed(_msgSender(), tokenId, price);
     }
 
-    function buyNFT(uint256 tokenId, address payable artist) public payable {
+    function buyNFT(uint256 tokenId) public payable nonReentrant {
         require(_listedTokens[tokenId], "Token is not listed for sale");
         uint256 price = _tokenPrices[tokenId];
         require(msg.value >= price, "Insufficient funds to buy");
 
         address seller = ownerOf(tokenId);
+        address artist = _tokenArtists[tokenId]; // Use the actual artist associated with the token
 
-        // REVIEW: someone can pass their own address as the artist and get paid the artist royalties to themselves (should use _tokenArtists)
-        // also add re-entrancy guard
-        // also make sure msg.sender and seller aren't the same
-        // should refund the amount of ETH a user spends over the price (e.g. if it's price is 0.1 and someone sends 0.2, they should be refunded the 0.1 IMO)
-        // also (unless _transfer() handles this which i think it might, but youll haev to read contract) set the new owner of the token
+        require(msg.sender != seller, "You cannot buy your own NFT");
+
+        // Calculate royalties and seller's amount
         uint256 artistRoyalty = (price * artistRoyaltyPercentage) / 10000;
         uint256 devRoyalty = (price * devRoyaltyPercentage) / 10000;
         uint256 sellerAmount = price - (artistRoyalty + devRoyalty);
 
+        // Refund excess ETH
+        if (msg.value > price) {
+            payable(msg.sender).transfer(msg.value - price);
+        }
+
         // Transfer the NFT to the buyer
-        //
         _transfer(seller, msg.sender, tokenId);
 
         // Transfer royalties
-        artist.transfer(artistRoyalty);
-        dev.transfer(devRoyalty);
+        payable(artist).transfer(artistRoyalty);
+        payable(dev).transfer(devRoyalty);
 
         // Transfer the remaining funds to the seller
         payable(seller).transfer(sellerAmount);
@@ -190,3 +185,9 @@ contract Heartify is
         return super.supportsInterface(interfaceId);
     }
 }
+
+// REVIEW: someone can pass their own address as the artist and get paid the artist royalties to themselves (should use _tokenArtists)
+// also add re-entrancy guard
+// also make sure msg.sender and seller aren't the same
+// should refund the amount of ETH a user spends over the price (e.g. if it's price is 0.1 and someone sends 0.2, they should be refunded the 0.1 IMO)
+// also (unless _transfer() handles this which i think it might, but youll haev to read contract) set the new owner of the token
