@@ -65,6 +65,7 @@ contract Heartify is
         uint256 tokenId = currentTokenId;
         // _setTokenURI(tokenId, uri); will set uri from front end
         _safeMint(to, tokenId);
+        // can just use msg.sender
         _tokenArtists[tokenId] = artist;
         dev.transfer(msg.value);
     }
@@ -84,14 +85,17 @@ contract Heartify is
             "Insufficient funds to batch mint"
         );
         require(numberOfTokens > 0, "Must mint at least one token");
-
+        // not sure why this is necessary
         uint256[] memory tokenIds = new uint256[](numberOfTokens);
 
         for (uint256 i = 0; i < numberOfTokens; i++) {
             currentTokenId += 1;
             uint256 newTokenId = currentTokenId;
+            // should just use msg.sender instead of to
             _safeMint(to, newTokenId);
             // _setTokenURI(newTokenId, uri) has to be done front end
+
+            // again, not sure why this is necessary if it's just for the event, safeMint already emits a Transfer() event for each token
             tokenIds[i] = newTokenId;
         }
 
@@ -115,11 +119,17 @@ contract Heartify is
 
         address seller = ownerOf(tokenId);
 
+        // REVIEW: someone can pass their own address as the artist and get paid the artist royalties to themselves (should use _tokenArtists)
+        // also add re-entrancy guard
+        // also make sure msg.sender and seller aren't the same
+        // should refund the amount of ETH a user spends over the price (e.g. if it's price is 0.1 and someone sends 0.2, they should be refunded the 0.1 IMO)
+        // also (unless _transfer() handles this which i think it might, but youll haev to read contract) set the new owner of the token
         uint256 artistRoyalty = (price * artistRoyaltyPercentage) / 10000;
         uint256 devRoyalty = (price * devRoyaltyPercentage) / 10000;
         uint256 sellerAmount = price - (artistRoyalty + devRoyalty);
 
         // Transfer the NFT to the buyer
+        //
         _transfer(seller, msg.sender, tokenId);
 
         // Transfer royalties
