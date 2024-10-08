@@ -65,7 +65,7 @@ contract Heartify is
         // _setTokenURI(tokenId, uri); will set uri from front end
         _safeMint(to, tokenId);
         // can just use msg.sender
-        _tokenArtists[currentTokenId] = msg.sender; // Use the minter's address as the artist.
+        _tokenArtists[tokenId] = msg.sender; // Use the minter's address as the artist.
         dev.transfer(msg.value);
     }
 
@@ -90,6 +90,7 @@ contract Heartify is
             // should just use msg.sender instead of to
             _safeMint(to, newTokenId);
             // _setTokenURI(newTokenId, uri) has to be done front end
+            _tokenArtists[newTokenId] = msg.sender;
         }
         dev.transfer(msg.value); // Transfer funds
     }
@@ -110,7 +111,7 @@ contract Heartify is
         require(msg.value >= price, "Insufficient funds to buy");
 
         address seller = ownerOf(tokenId);
-        address artist = _tokenArtists[tokenId]; // Use the actual artist associated with the token
+        address artist = _tokenArtists[tokenId]; // Get the artist associated with the token
 
         require(msg.sender != seller, "You cannot buy your own NFT");
 
@@ -139,12 +140,6 @@ contract Heartify is
         _tokenPrices[tokenId] = 0;
 
         emit NFTBought(msg.sender, tokenId, price);
-    }
-
-    function withdrawFunds() public onlyOwner {
-        uint256 balance = address(this).balance;
-        require(balance > 0, "No funds to withdraw");
-        dev.transfer(balance);
     }
 
     // The following functions are overrides required by Solidity.

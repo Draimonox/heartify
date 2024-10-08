@@ -123,26 +123,6 @@ describe("Heartify NFT Contract", function () {
     ).to.be.revertedWith("Token is not listed for sale");
   });
 
-  it("should allow the owner to withdraw funds", async function () {
-    await heartify
-      .connect(artist)
-      .safeMint(await artist.getAddress(), { value: mintingFee });
-    await heartify.connect(artist).listNFT(1, ethers.parseEther("100"));
-    await heartify
-      .connect(buyer)
-      .buyNFT(1, { value: ethers.parseEther("100") });
-
-    const initialDevBalance = await ethers.provider.getBalance(
-      await dev.getAddress()
-    );
-    await heartify.withdrawFunds();
-    const finalDevBalance = await ethers.provider.getBalance(
-      await dev.getAddress()
-    );
-
-    expect(finalDevBalance).to.be.gt(initialDevBalance); // Check if funds have been withdrawn
-  });
-
   it("should pause and unpause the contract", async function () {
     await heartify.pause();
     await expect(
