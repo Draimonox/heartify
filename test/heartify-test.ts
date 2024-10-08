@@ -1,7 +1,8 @@
 import { ethers } from "hardhat";
+import { Heartify } from "../typechain-types";
 import { expect } from "chai";
-import { Heartify } from "../typechain-types"; // Adjust the path as necessary
-import { BigNumber, Signer } from "ethers";
+import { Signer } from "ethers";
+// import { ethers } from "ethers";
 
 describe("Heartify NFT Contract", function () {
   let heartify: Heartify;
@@ -9,12 +10,11 @@ describe("Heartify NFT Contract", function () {
   let artist: Signer;
   let buyer: Signer;
   let dev: Signer;
-  const mintingFee = ethers.utils.parseEther("15"); // 15 MATIC
+  const mintingFee = ethers.parseEther("15"); // 15 MATIC
 
   beforeEach(async function () {
     const HeartifyFactory = await ethers.getContractFactory("Heartify");
-    [owner, artist, buyer, dev] =
-      (await ethers.getSigners()) as unknown as Signer[];
+    [owner, artist, buyer, dev] = await ethers.getSigners();
 
     heartify = (await HeartifyFactory.deploy(
       await owner.getAddress()
@@ -40,7 +40,7 @@ describe("Heartify NFT Contract", function () {
   it("should not mint if insufficient funds are sent", async function () {
     await expect(
       heartify.connect(artist).safeMint(await artist.getAddress(), {
-        value: ethers.utils.parseEther("10"),
+        value: ethers.parseEther("10"),
       }) // Less than 15
     ).to.be.revertedWith("Insufficient funds to mint");
   });
@@ -56,10 +56,8 @@ describe("Heartify NFT Contract", function () {
     await heartify
       .connect(artist)
       .safeMint(await artist.getAddress(), { value: mintingFee });
-    await heartify.connect(artist).listNFT(1, ethers.utils.parseEther("100"));
-    expect(await heartify.getTokenPrice(1)).to.equal(
-      ethers.utils.parseEther("100")
-    );
+    await heartify.connect(artist).listNFT(1, ethers.parseEther("100"));
+    expect(await heartify.getTokenPrice(1)).to.equal(ethers.parseEther("100"));
   });
 
   it("should not allow listing an NFT that the user does not own", async function () {
@@ -67,7 +65,7 @@ describe("Heartify NFT Contract", function () {
       .connect(artist)
       .safeMint(await artist.getAddress(), { value: mintingFee });
     await expect(
-      heartify.connect(buyer).listNFT(1, ethers.utils.parseEther("100"))
+      heartify.connect(buyer).listNFT(1, ethers.parseEther("100"))
     ).to.be.revertedWith("You do not own this token");
   });
 
@@ -75,10 +73,10 @@ describe("Heartify NFT Contract", function () {
     await heartify
       .connect(artist)
       .safeMint(await artist.getAddress(), { value: mintingFee });
-    await heartify.connect(artist).listNFT(1, ethers.utils.parseEther("100"));
+    await heartify.connect(artist).listNFT(1, ethers.parseEther("100"));
     await heartify
       .connect(buyer)
-      .buyNFT(1, { value: ethers.utils.parseEther("100") });
+      .buyNFT(1, { value: ethers.parseEther("100") });
 
     expect(await heartify.ownerOf(1)).to.equal(await buyer.getAddress());
   });
@@ -87,7 +85,7 @@ describe("Heartify NFT Contract", function () {
     await heartify
       .connect(artist)
       .safeMint(await artist.getAddress(), { value: mintingFee });
-    await heartify.connect(artist).listNFT(1, ethers.utils.parseEther("100"));
+    await heartify.connect(artist).listNFT(1, ethers.parseEther("100"));
 
     const initialDevBalance = await ethers.provider.getBalance(
       await dev.getAddress()
@@ -98,7 +96,7 @@ describe("Heartify NFT Contract", function () {
 
     await heartify
       .connect(buyer)
-      .buyNFT(1, { value: ethers.utils.parseEther("100") });
+      .buyNFT(1, { value: ethers.parseEther("100") });
 
     const finalDevBalance = await ethers.provider.getBalance(
       await dev.getAddress()

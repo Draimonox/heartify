@@ -19,6 +19,7 @@
     "@openzeppelin/contracts-upgradeable": "^5.0.2",
     "@types/sinon-chai": "^3.2.3",
     "dotenv": "^16.4.5",
+    "ethers": "^6.13.3",
     "next": "14.2.14",
     "openzeppelin-solidity": "^3.4.2",
     "react": "^18",
