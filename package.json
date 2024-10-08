@@ -42,7 +42,7 @@
     "chai": "^4.2.0",
     "eslint": "^8",
     "eslint-config-next": "14.2.14",
-    "hardhat": "^2.22.12",
+    "hardhat": "^2.22.13",
     "hardhat-gas-reporter": "^1.0.8",
     "postcss": "^8",
     "prettier": "^3.3.3",
