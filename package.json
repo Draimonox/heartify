@@ -17,6 +17,7 @@
     "@nomicfoundation/hardhat-ignition": "^0.15.6",
     "@openzeppelin/contracts": "^5.0.2",
     "@openzeppelin/contracts-upgradeable": "^5.0.2",
+    "@tabler/icons-react": "^3.19.0",
     "@types/sinon-chai": "^3.2.3",
     "dotenv": "^16.4.5",
     "ethers": "^6.13.3",
