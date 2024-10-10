@@ -4,8 +4,8 @@ import { Button, Text } from "@mantine/core";
 import { deleteCookie, getCookie } from "cookies-next";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import jwt from "jsonwebtoken";
+// import { useEffect, useState } from "react";
+// import jwt from "jsonwebtoken";
 
 function Header() {
   const router = useRouter();
