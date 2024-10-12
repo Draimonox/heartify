@@ -1,5 +1,5 @@
-"use client";
 import { Button, Text } from "@mantine/core";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 import { deleteCookie, getCookie } from "cookies-next";
 
@@ -45,17 +45,7 @@ function Header() {
           BlogUp!
         </Text>
         <div style={{ display: "flex", gap: "10px" }}>
-          <Button
-            variant="light"
-            color="blue"
-            size="lg"
-            radius="xl"
-            onClick={() => {
-              router.push("/");
-            }}
-          >
-            Search
-          </Button>
+          <ConnectButton />
           <Button
             variant="light"
             color="green"
