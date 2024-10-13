@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+"use client";
+
 import "@mantine/core/styles.css";
 import { ColorSchemeScript, MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -9,11 +10,6 @@ import { WalletOptions } from "./components/walletOptions";
 import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
 
 const queryClient = new QueryClient();
-
-export const metadata: Metadata = {
-  title: "Heartify",
-  description: "",
-};
 
 function ConnectWallet() {
   const { isConnected } = useAccount();
@@ -35,8 +31,8 @@ export default function RootLayout({
               <ColorSchemeScript />
             </head>
             <body>
-              <ConnectWallet />
               <MantineProvider forceColorScheme="dark">
+                <ConnectWallet />
                 {children}
               </MantineProvider>
             </body>

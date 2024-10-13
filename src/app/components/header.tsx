@@ -1,3 +1,4 @@
+"use client";
 import { Button, Text } from "@mantine/core";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 
@@ -42,7 +43,7 @@ function Header() {
             router.push("/main");
           }}
         >
-          BlogUp!
+          Heartify
         </Text>
         <div style={{ display: "flex", gap: "10px" }}>
           <ConnectButton />
