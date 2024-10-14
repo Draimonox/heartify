@@ -1,7 +1,7 @@
 "use client";
 import { Button, Text } from "@mantine/core";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-
+import { useAccount, useDisconnect, useEnsAvatar, useEnsName } from "wagmi";
 import { deleteCookie, getCookie } from "cookies-next";
 
 import { useRouter } from "next/navigation";
@@ -9,8 +9,8 @@ import { useRouter } from "next/navigation";
 // import jwt from "jsonwebtoken";
 
 function Header() {
+  const { disconnect } = useDisconnect();
   const router = useRouter();
-
   function logOut() {
     console.log("Logging out...");
     deleteCookie("token");
@@ -47,7 +47,8 @@ function Header() {
           Heartify
         </Text>
         <div style={{ display: "flex", gap: "10px" }}>
-          <ConnectButton />
+          <Button onClick={() => disconnect()}>Disconnect</Button>
+          <ConnectButton showBalance={false} chainStatus={"icon"} />
           <Button
             variant="light"
             color="green"
