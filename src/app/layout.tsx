@@ -5,9 +5,9 @@ import { ColorSchemeScript, MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAccount, WagmiProvider } from "wagmi";
 import { config } from "../../config";
-import { Account } from "../app/components/account";
-import { WalletOptions } from "./components/walletOptions";
-import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
+import Account from "../app/components/account";
+import WalletOptions from "./components/walletOptions";
+import { RainbowKitProvider, midnightTheme } from "@rainbow-me/rainbowkit";
 
 const queryClient = new QueryClient();
 
@@ -23,22 +23,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
-          <html lang="en">
-            <head>
-              <ColorSchemeScript />
-            </head>
-            <body>
-              <MantineProvider forceColorScheme="dark">
+    <html lang="en">
+      <body>
+        <MantineProvider forceColorScheme="dark">
+          <WagmiProvider config={config}>
+            <QueryClientProvider client={queryClient}>
+              <RainbowKitProvider
+                theme={{
+                  ...midnightTheme({ ...midnightTheme.accentColors.purple }),
+                }}
+              >
+                <head>
+                  <ColorSchemeScript />
+                </head>
                 <ConnectWallet />
                 {children}
-              </MantineProvider>
-            </body>
-          </html>
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+              </RainbowKitProvider>
+            </QueryClientProvider>
+          </WagmiProvider>
+        </MantineProvider>
+      </body>
+    </html>
   );
 }

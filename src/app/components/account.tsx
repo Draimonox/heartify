@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { useAccount, useDisconnect, useEnsAvatar, useEnsName } from "wagmi";
 
-export function Account() {
+function Account() {
   const { address } = useAccount();
   const { disconnect } = useDisconnect();
   const { data: ensName } = useEnsName({ address });
@@ -18,3 +18,5 @@ export function Account() {
     </div>
   );
 }
+
+export default Account;

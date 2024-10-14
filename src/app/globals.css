@@ -2,8 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  color: white;
+}
+
+body {
+  font-family: "Roboto", sans-serif;
+  background: aliceblue;
+}
+
+:root {
+  --wcm-background-color: transparent; /* Remove background */
+  --wcm-button-border-radius: 0px; /* Remove button border-radius */
+  --wcm-text-small-thin-size: 16px; /* Change text size */
 }
