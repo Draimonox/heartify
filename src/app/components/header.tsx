@@ -11,11 +11,7 @@ import { useRouter } from "next/navigation";
 function Header() {
   const { disconnect } = useDisconnect();
   const router = useRouter();
-  function logOut() {
-    console.log("Logging out...");
-    deleteCookie("token");
-    router.push("/login");
-  }
+
   const token = getCookie("token");
   if (!token) {
     router.push("/");
@@ -47,36 +43,25 @@ function Header() {
           Heartify
         </Text>
         <div style={{ display: "flex", gap: "10px" }}>
-          <Button onClick={() => disconnect()}>Disconnect</Button>
-          <ConnectButton showBalance={false} chainStatus={"icon"} />
-          <Button
+          {/* <Button
             variant="light"
             color="green"
             size="lg"
             radius="xl"
-            onClick={() => {
-              router.push("/blogUp");
-            }}
-          >
-            BlogUp!
-          </Button>
-          <Button
-            variant="light"
-            color="gray"
-            size="lg"
-            radius="xl"
             onClick={() => {}}
           >
-            Profile
-          </Button>
+            Connect Wallet
+          </Button> */}
+          <ConnectButton showBalance={false} chainStatus={"icon"} />
           <Button
             variant="light"
             color="red"
             size="lg"
             radius="xl"
-            onClick={logOut}
+            disabled={!ConnectButton}
+            onClick={() => disconnect()}
           >
-            Log out
+            Disconnect
           </Button>
         </div>
       </header>
