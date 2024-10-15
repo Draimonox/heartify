@@ -1,7 +1,7 @@
 "use client";
 
 import "@mantine/core/styles.css";
-import { MantineProvider } from "@mantine/core";
+import { ColorSchemeScript, MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAccount, WagmiProvider } from "wagmi";
 import { config } from "../../config";
@@ -30,10 +30,12 @@ export default function RootLayout({
             <WagmiProvider config={config}>
               <QueryClientProvider client={queryClient}>
                 <RainbowKitProvider
+                  modalSize="wide"
                   theme={{
                     ...midnightTheme({ ...midnightTheme.accentColors.purple }),
                   }}
                 >
+                  {/* <ConnectWallet /> */}
                   {children}
                 </RainbowKitProvider>
               </QueryClientProvider>
