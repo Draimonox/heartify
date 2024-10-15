@@ -1,10 +1,12 @@
 "use client";
 import React from "react";
 
-export const readContract = () => {
+function readContract() {
   return (
     <>
       <h1>readContract</h1>;
     </>
   );
-};
+}
+
+export default readContract;

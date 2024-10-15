@@ -1,7 +1,7 @@
 "use client";
 import { Button, Text } from "@mantine/core";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { useAccount, useDisconnect, useEnsAvatar, useEnsName } from "wagmi";
+import { useDisconnect } from "wagmi";
 import { deleteCookie, getCookie } from "cookies-next";
 
 import { useRouter } from "next/navigation";
