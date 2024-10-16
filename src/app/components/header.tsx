@@ -2,8 +2,8 @@
 import { Button, Text } from "@mantine/core";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useDisconnect } from "wagmi";
-import { deleteCookie, getCookie } from "cookies-next";
-
+import { getCookie } from "cookies-next";
+import ConnectWallet from "./connectWallet";
 import { useRouter } from "next/navigation";
 // import { useEffect, useState } from "react";
 // import jwt from "jsonwebtoken";
@@ -43,22 +43,12 @@ function Header() {
           Heartify
         </Text>
         <div style={{ display: "flex", gap: "10px" }}>
-          {/* <Button
-            variant="light"
-            color="green"
-            size="lg"
-            radius="xl"
-            onClick={() => {}}
-          >
-            Connect Wallet
-          </Button> */}
-          <ConnectButton showBalance={false} chainStatus={"icon"} />
+          <ConnectWallet />
           <Button
             variant="light"
             color="red"
             size="lg"
             radius="xl"
-            disabled={!ConnectButton}
             onClick={() => disconnect()}
           >
             Disconnect
