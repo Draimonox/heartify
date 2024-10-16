@@ -60,10 +60,14 @@ const ConnectWallet = () => {
 
               return (
                 <div style={{ display: "flex", gap: 12 }}>
-                  <button
+                  <Button
                     onClick={openChainModal}
                     style={{ display: "flex", alignItems: "center" }}
                     type="button"
+                    size="lg"
+                    radius="xl"
+                    variant="subtle"
+                    color="gray"
                   >
                     {chain.hasIcon && (
                       <div
@@ -86,15 +90,22 @@ const ConnectWallet = () => {
                         )}
                       </div>
                     )}
-                    {chain.name}
-                  </button>
+                    {chain.name?.toUpperCase()}
+                  </Button>
 
-                  <button onClick={openAccountModal} type="button">
+                  <Button
+                    onClick={openAccountModal}
+                    type="button"
+                    size="lg"
+                    radius="xl"
+                    variant="subtle"
+                    color="gray"
+                  >
                     {account.displayName}
                     {account.displayBalance
                       ? ` (${account.displayBalance})`
                       : ""}
-                  </button>
+                  </Button>
                 </div>
               );
             })()}
