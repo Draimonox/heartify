@@ -1,6 +1,6 @@
 "use client";
 import { Button, Text } from "@mantine/core";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+// import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useDisconnect } from "wagmi";
 import { getCookie } from "cookies-next";
 import ConnectWallet from "./connectWallet";
