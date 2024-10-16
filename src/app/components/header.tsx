@@ -5,6 +5,8 @@ import { useDisconnect } from "wagmi";
 import { getCookie } from "cookies-next";
 import ConnectWallet from "./connectWallet";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import logo from "../logo.png";
 // import { useEffect, useState } from "react";
 // import jwt from "jsonwebtoken";
 
@@ -31,17 +33,36 @@ function Header() {
           color: "red",
         }}
       >
-        <Text
-          size="xl"
-          fw={700}
-          c="teal.4"
-          style={{ marginLeft: "50px", cursor: "pointer" }}
-          onClick={() => {
-            router.push("/main");
-          }}
-        >
-          Heartify
-        </Text>
+        <div style={{ width: "100vw", display: "flex", alignItems: "center" }}>
+          <Image
+            src={logo}
+            alt="Heartify Logo"
+            width={50}
+            height={50}
+            style={{ marginLeft: "2%" }}
+          />
+          <Text
+            size="xl"
+            fw={900}
+            variant="gradient"
+            gradient={{
+              from: "rgba(119, 44, 232, 0.68)",
+              to: " rgba(128, 187, 255, 1)",
+              deg: 360,
+            }}
+            style={{
+              cursor: "pointer",
+              marginLeft: "1%",
+              fontFamily: "copperplate gothic",
+              outline: "white",
+            }}
+            onClick={() => {
+              router.push("/main");
+            }}
+          >
+            Heartify
+          </Text>
+        </div>
         <div style={{ display: "flex", gap: "10px" }}>
           <ConnectWallet />
           <Button
