@@ -6,9 +6,11 @@ async function main() {
   console.log("Deploying contracts with the account:", deployer.address);
 
   const Heartify = await ethers.getContractFactory("Heartify");
-  const heartify = await Heartify.deploy(deployer.address); // Pass the deployer's address as the default admin
+  const heartify = await Heartify.deploy(deployer.address);
 
-  console.log("Heartify contract deployed to:", heartify.address);
+  await heartify.waitForDeployment();
+
+  console.log("Heartify contract deployed to:", await heartify.getAddress());
 }
 
 main()

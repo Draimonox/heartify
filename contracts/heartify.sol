@@ -24,6 +24,7 @@ contract Heartify is
     uint256 private currentTokenId;
     address payable public dev =
         payable(0x4f2503fC63066E69C2f72537927Bf24eaebc55AA);
+    // address public contractAddress = address(this); // Removed as it's not necessary
 
     event MintingFeeUpdated(uint256 newFee);
     event NFTSold(address seller, uint256 tokenId, uint256 price);

@@ -9,7 +9,7 @@ import { WagmiProvider, http } from "wagmi";
 import { RainbowKitProvider, midnightTheme } from "@rainbow-me/rainbowkit";
 // import { injected, metaMask, safe, walletConnect } from "wagmi/connectors";
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
-import { mainnet, base } from "wagmi/chains";
+import { base, baseSepolia } from "wagmi/chains";
 import "@rainbow-me/rainbowkit/styles.css";
 
 const projectId = "4a8dc4d3faf82e8069b2095c947af7cb";
@@ -23,9 +23,10 @@ const projectId = "4a8dc4d3faf82e8069b2095c947af7cb";
 const config = getDefaultConfig({
   appName: "Heartify",
   projectId: projectId,
-  chains: [mainnet, base],
+  chains: [baseSepolia, base],
   transports: {
-    [mainnet.id]: http(),
+    [base.id]: http(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC_URL),
+    [baseSepolia.id]: http(process.env.NEXT_PUBLIC_BASE_TESTNET_RPC_URL),
   },
 });
 
