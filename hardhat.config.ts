@@ -21,7 +21,7 @@ if (!baseSepoliaRpcUrl) {
   );
 }
 
-const config: HardhatUserConfig = {
+export const config: HardhatUserConfig = {
   solidity: "0.8.27",
   networks: {
     hardhat: {

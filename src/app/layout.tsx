@@ -20,7 +20,7 @@ const projectId = "4a8dc4d3faf82e8069b2095c947af7cb";
 //   return <WalletOptions />;
 // }
 
-const config = getDefaultConfig({
+export const config = getDefaultConfig({
   appName: "Heartify",
   projectId: projectId,
   chains: [baseSepolia, base],
