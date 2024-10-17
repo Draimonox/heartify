@@ -3,7 +3,8 @@ import Header from "../components/header";
 import { type BaseError, useReadContracts, useWriteContract } from "wagmi";
 import { wagmiConfig } from "../lib/wagmi/createConfig";
 
-export default function Home() {
+// contract address :  0x6EBfa771489B9D56DaD960AA24db1f8C69f89Ccc
+function Artify() {
   const { data, error, isPending } = useReadContracts({
     contracts: [
       {
@@ -40,3 +41,5 @@ export default function Home() {
     </>
   );
 }
+
+export default Artify;
